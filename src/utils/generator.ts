@@ -9,7 +9,7 @@ export function generatePassword(
   let upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let lower = "abcdefghijklmnopqrstuvwxyz";
   let numbers = "0123456789";
-  let symbols = "!@#$%^&*()_+[]{}|;:,.<>?";
+  const symbols = "!@#$%^&*()_+[]{}|;:,.<>?";
 
   if (excludeLookAlikes) {
     // remove O 0 l 1 I etc.
