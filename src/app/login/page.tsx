@@ -6,11 +6,11 @@ import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage("");
 
@@ -26,18 +26,23 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data: { error?: string; token?: string } = await res.json();
+
       if (!res.ok) {
         setMessage(data.error || "Login failed");
         return;
       }
 
-      localStorage.setItem("token", data.token);
-      setMessage("Login successful!");
-      setTimeout(() => router.push("/vault"), 1000);
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        setMessage("Login successful!");
+        setTimeout(() => router.push("/vault"), 1000);
+      } else {
+        setMessage("Login failed: no token received");
+      }
     } catch (err) {
       console.error(err);
-      setMessage("Error during login");
+      setMessage(err instanceof Error ? err.message : "Error during login");
     }
   };
 

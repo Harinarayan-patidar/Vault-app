@@ -4,8 +4,11 @@ import { connectDB } from "@/lib/db";
 import jwt from "jsonwebtoken";
 import CryptoJS from "crypto-js";
 
-const SECRET = process.env.JWT_SECRET!;
-const CRYPTO_SECRET = process.env.CRYPTO_SECRET!; // same key used while encrypting
+const SECRET = process.env.JWT_SECRET;
+const CRYPTO_SECRET = process.env.CRYPTO_SECRET;
+
+if (!SECRET) throw new Error("JWT_SECRET not defined");
+if (!CRYPTO_SECRET) throw new Error("CRYPTO_SECRET not defined");
 
 export async function GET(req: Request) {
   try {
@@ -15,9 +18,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 2️⃣ Verify JWT and get userId
-    const decoded: any = jwt.verify(token, SECRET);
+    const decoded = jwt.verify(token, SECRET as string) as jwt.JwtPayload;
+    if (!decoded || typeof decoded !== "object" || !("userId" in decoded)) {
+      return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
+    }
+    const userId = (decoded as { userId: string }).userId;
 
-    // 3️⃣ Connect to DB
     await connectDB();
 
     // 4️⃣ Fetch all vault items for the user
@@ -25,7 +31,7 @@ export async function GET(req: Request) {
 
     // 5️⃣ Decrypt all fields for each item
     const decryptedItems = items.map((item) => {
-      const decryptedItem: Record<string, any> = {};
+      const decryptedItem: Record<string, string | unknown> = {};
       for (const key in item._doc) {
         if (key === "_id" || key === "userId" || key === "__v") {
           // keep non-encrypted fields as-is
@@ -34,7 +40,7 @@ export async function GET(req: Request) {
           try {
             decryptedItem[key] = CryptoJS.AES.decrypt(
               item[key],
-              CRYPTO_SECRET
+              CRYPTO_SECRET as string
             ).toString(CryptoJS.enc.Utf8);
           } catch {
             decryptedItem[key] = item[key]; // fallback if not encrypted
@@ -46,10 +52,11 @@ export async function GET(req: Request) {
 
     // 6️⃣ Return decrypted items
     return NextResponse.json(decryptedItems);
-  } catch (err: any) {
+  } catch (err) {
     console.error("Vault GET error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch vault items", details: err.message },
+      { error: "Failed to fetch vault items", details: message },
       { status: 500 }
     );
   }

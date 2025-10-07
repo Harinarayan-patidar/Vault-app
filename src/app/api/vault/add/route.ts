@@ -4,8 +4,11 @@ import { connectDB } from "@/lib/db";
 import jwt from "jsonwebtoken";
 import CryptoJS from "crypto-js";
 
-const SECRET = process.env.JWT_SECRET!;
-const CRYPTO_SECRET = process.env.CRYPTO_SECRET!; // same key for encryption/decryption
+const SECRET = process.env.JWT_SECRET as string;
+const CRYPTO_SECRET = process.env.CRYPTO_SECRET as string;
+
+if (!SECRET) throw new Error("JWT_SECRET not defined");
+if (!CRYPTO_SECRET) throw new Error("CRYPTO_SECRET not defined");
 
 export async function POST(req: Request) {
   try {
@@ -15,10 +18,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // 2️⃣ Verify JWT and get userId
-    const decoded: any = jwt.verify(token, SECRET);
+    const decoded = jwt.verify(token, SECRET) as unknown as { userId: string };
 
     // 3️⃣ Parse request body
-    const body = await req.json();
+    const body: Record<string, string | number> = await req.json();
 
     // 4️⃣ Connect to DB
     await connectDB();
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
       if (body.hasOwnProperty(key)) {
         encryptedData[key] = CryptoJS.AES.encrypt(
           body[key].toString(),
-          CRYPTO_SECRET
+          CRYPTO_SECRET as string
         ).toString();
       }
     }
@@ -37,15 +40,16 @@ export async function POST(req: Request) {
     // 6️⃣ Create the item in DB with encrypted fields
     const item = await VaultItem.create({
       ...encryptedData,
-      userId: decoded.userId, // userId can stay as plain text if needed for querying
+      userId: decoded.userId,
     });
 
     // 7️⃣ Return success (do NOT return decrypted data)
     return NextResponse.json({ message: "Item added", item });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Vault POST error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to add vault item", details: err.message },
+      { error: "Failed to add vault item", details: message },
       { status: 500 }
     );
   }

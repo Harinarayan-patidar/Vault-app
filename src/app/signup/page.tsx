@@ -6,11 +6,11 @@ import { motion } from "framer-motion";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage("");
 
@@ -26,7 +26,8 @@ export default function SignupPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data: { error?: string; userId?: string } = await res.json();
+
       if (!res.ok) {
         setMessage(data.error || "Signup failed");
         return;
@@ -36,7 +37,7 @@ export default function SignupPage() {
       setTimeout(() => router.push("/login"), 1000);
     } catch (err) {
       console.error(err);
-      setMessage("Error during signup");
+      setMessage(err instanceof Error ? err.message : "Error during signup");
     }
   };
 

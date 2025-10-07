@@ -1,16 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { motion } from "framer-motion";
 
+interface VaultItemType {
+  _id: string;
+  title?: string;
+  username?: string;
+  password?: string;
+  url?: string;
+  notes?: string;
+}
+
+interface FormType {
+  title: string;
+  username: string;
+  password: string;
+  url: string;
+  notes: string;
+}
+
 export default function VaultPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<any[]>([]);
+  const [items, setItems] = useState<VaultItemType[]>([]);
+  const [filtered, setFiltered] = useState<VaultItemType[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState<any>(null);
-  const [form, setForm] = useState({
+  const [editItem, setEditItem] = useState<VaultItemType | null>(null);
+  const [form, setForm] = useState<FormType>({
     title: "",
     username: "",
     password: "",
@@ -24,12 +41,11 @@ export default function VaultPage() {
       const res = await fetch("/api/vault/get", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const data: VaultItemType[] = await res.json();
 
-      if (!res.ok) throw new Error(data.error || "Failed to fetch items");
+      if (!res.ok) throw new Error((data as any).error || "Failed to fetch items");
 
       setItems(data);
-      console.log("Fetched items:", data);
       setFiltered(data);
     } catch (err) {
       console.error(err);
@@ -55,7 +71,7 @@ export default function VaultPage() {
     );
   }, [search, items]);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -77,11 +93,8 @@ export default function VaultPage() {
       body: JSON.stringify(form),
     });
 
-    const data = await res.json();
-    if (!res.ok) return alert(data.error || "Something went wrong");
-    if(data){
-       console.log("Item saved/updated:", data);
-    }
+    const data: VaultItemType = await res.json();
+    if (!res.ok) return alert((data as any).error || "Something went wrong");
 
     if (editItem) {
       setItems((prev) =>
@@ -121,8 +134,7 @@ export default function VaultPage() {
     }
   };
 
-  
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: VaultItemType) => {
     setEditItem(item);
     setForm({
       title: item.title || "",
@@ -157,7 +169,6 @@ export default function VaultPage() {
         + Add New
       </button>
 
-
       {loading ? (
         <p>Loading...</p>
       ) : filtered.length === 0 ? (
@@ -187,9 +198,7 @@ export default function VaultPage() {
               )}
 
               {item.notes && (
-                <p className="text-sm text-gray-400 mt-1 italic">
-                  {item.notes}
-                </p>
+                <p className="text-sm text-gray-400 mt-1 italic">{item.notes}</p>
               )}
 
               <div className="flex gap-2 mt-3">
@@ -210,7 +219,6 @@ export default function VaultPage() {
           ))}
         </div>
       )}
-
 
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70">
@@ -252,7 +260,7 @@ export default function VaultPage() {
               value={form.notes}
               onChange={handleChange}
               className="w-full p-2 mb-3 bg-gray-700 rounded"
-            ></textarea>
+            />
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setModalOpen(false)}
