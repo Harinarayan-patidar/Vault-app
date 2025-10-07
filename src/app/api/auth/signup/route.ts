@@ -8,47 +8,43 @@ interface SignupRequestBody {
   password: string;
 }
 
-export async function POST(req: Request) {
+interface SignupResponse {
+  message: string;
+  userId?: string;
+  error?: string;
+}
+
+export async function POST(req: Request): Promise<NextResponse<SignupResponse>> {
   try {
+    // Parse request body
     const body: SignupRequestBody = await req.json();
     const { email, password } = body;
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
     // Ensure DB is connected
     await connectDB();
 
-    // Check if user exists
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return NextResponse.json(
-        { error: "User already exists" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create new user
     const newUser = await User.create({ email, password: hashedPassword });
 
     return NextResponse.json({
       message: "User created successfully",
-      userId: newUser._id,
+      userId: newUser._id.toString(),
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Signup error:", err);
-
-    // Generic type-safe error handling
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Internal server error", error: "Internal server error" }, { status: 500 });
   }
 }
