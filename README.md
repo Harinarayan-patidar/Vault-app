@@ -39,7 +39,5 @@ Vault App is a secure personal vault application that helps users store, manage,
 git clone https://github.com/Harinarayan-patidar/Vault-app.git
 cd Vault-app
 
-
-cd backend
 npm install
 
